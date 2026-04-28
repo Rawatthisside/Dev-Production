@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.prose h1 { font-size: 40px; }
+.prose h2 { font-size: 36px; }
+.prose h3 { font-size: 32px; }
+.prose h4 { font-size: 28px; }
+.prose h5 { font-size: 24px; }
+
+.prose a:any-link,
+.ProseMirror a:any-link {
+  color: #2563eb !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:visited,
+.ProseMirror a:visited {
+  color: #7e22ce !important;
+}
+
+.prose a:hover,
+.ProseMirror a:hover {
+  color: #1d4ed8 !important;
+}
