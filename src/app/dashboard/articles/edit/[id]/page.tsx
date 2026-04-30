@@ -11,6 +11,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
+import { readErrorMessage } from "@/lib/read-error-message";
 
 type Article = {
   _id: string;
@@ -94,7 +95,11 @@ export default function EditArticlePage() {
       try {
         const res = await fetch(`/api/articles?id=${params.id}`);
 
-        if (!res.ok) throw new Error();
+        if (!res.ok) {
+          throw new Error(
+            await readErrorMessage(res, "Failed to load article."),
+          );
+        }
 
         const data: Article = await res.json();
 
@@ -103,8 +108,10 @@ export default function EditArticlePage() {
         setStatus(data.status === "publish" ? "publish" : "draft");
 
         editor.commands.setContent(data.content || "<p></p>");
-      } catch {
-        setError("Failed to load article.");
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Failed to load article.",
+        );
       }
     };
 
@@ -131,11 +138,17 @@ export default function EditArticlePage() {
         }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        throw new Error(
+          await readErrorMessage(res, "Failed to update article."),
+        );
+      }
 
       router.push("/dashboard/articles");
-    } catch {
-      setError("Failed to update article.");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to update article.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -233,15 +246,32 @@ export default function EditArticlePage() {
                       const formData = new FormData();
                       formData.append("file", file);
 
-                      const res = await fetch("/api/upload", {
-                        method: "POST",
-                        body: formData,
-                      });
+                      try {
+                        const res = await fetch("/api/upload", {
+                          method: "POST",
+                          body: formData,
+                        });
 
-                      const data = await res.json();
+                        if (!res.ok) {
+                          throw new Error(
+                            await readErrorMessage(res, "Image upload failed."),
+                          );
+                        }
 
-                      if (data.url) {
+                        const data = await res.json();
+
+                        if (!data.url) {
+                          throw new Error("Image upload failed.");
+                        }
+
+                        setError("");
                         editor?.chain().focus().setImage({ src: data.url }).run();
+                      } catch (error) {
+                        setError(
+                          error instanceof Error
+                            ? error.message
+                            : "Image upload failed.",
+                        );
                       }
                     };
 

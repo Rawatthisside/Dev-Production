@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
-import { enforceRateLimit } from "@/lib/api-security";
+import { enforceRateLimit, requireSession } from "@/lib/api-security";
+import { createApiErrorResponse } from "@/lib/api-error-response";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 
@@ -17,17 +16,10 @@ export async function POST(req: Request) {
       return rateLimitResponse;
     }
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    const auth = await requireSession("admin");
 
-    if (!token) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const authUser = verifyToken(token);
-
-    if (authUser.role !== "admin") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
+    if (auth.response) {
+      return auth.response;
     }
 
     await connectDB();
@@ -78,7 +70,12 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
-  } catch {
-    return Response.json({ error: "Failed to create user" }, { status: 500 });
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "users:create",
+      fallbackMessage: "Failed to create user",
+      duplicateKeyMessage: "User already exists",
+      invalidRequestMessage: "Invalid user payload",
+    });
   }
 }

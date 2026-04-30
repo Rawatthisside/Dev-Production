@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { readErrorMessage } from "@/lib/read-error-message";
 
 type Article = {
   _id: string;
@@ -24,6 +25,7 @@ export default function ArticlesPage() {
     "all",
   );
   const [page, setPage] = useState(1);
+  const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<{
     type: "edit" | "delete";
     id: string;
@@ -40,13 +42,18 @@ export default function ArticlesPage() {
     try {
       const res = await fetch("/api/articles");
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to fetch");
+        throw new Error(
+          await readErrorMessage(res, "Could not load articles."),
+        );
       }
       const data = await res.json();
       setArticles(data);
+      setError("");
     } catch (error) {
       setArticles([]);
+      setError(
+        error instanceof Error ? error.message : "Could not load articles.",
+      );
     }
   };
 
@@ -55,7 +62,7 @@ export default function ArticlesPage() {
       const res = await fetch("/api/auth/me");
       const data = await res.json();
       setUser(data);
-    } catch (error) {
+    } catch {
       setUser(null);
     }
   };
@@ -72,12 +79,22 @@ export default function ArticlesPage() {
     setPendingAction({ type: "delete", id });
     const minimumWait = wait(3000);
     try {
-      await fetch("/api/articles", {
+      const response = await fetch("/api/articles", {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ id }),
       });
       await minimumWait;
-      fetchArticles();
+
+      if (!response.ok) {
+        setError(await readErrorMessage(response, "Failed to delete article."));
+        return;
+      }
+
+      setError("");
+      await fetchArticles();
     } finally {
       setPendingAction(null);
     }
@@ -188,6 +205,12 @@ export default function ArticlesPage() {
           </button>
         </div>
       </div>
+
+      {error ? (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
 
       <div className="grid gap-4">
         {paginated.length === 0 ? (

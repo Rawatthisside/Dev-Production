@@ -1,4 +1,5 @@
 import { type UploadApiResponse } from "cloudinary";
+import { createApiErrorResponse } from "@/lib/api-error-response";
 import { enforceRateLimit, requireSession } from "@/lib/api-security";
 import { ARTICLE_CLOUDINARY_FOLDER, cloudinary } from "@/lib/cloudinary";
 
@@ -67,7 +68,11 @@ export async function POST(req: Request) {
       url: upload.secure_url,
       publicId: upload.public_id,
     });
-  } catch {
-    return Response.json({ error: "Upload failed" }, { status: 500 });
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "upload:image",
+      fallbackMessage: "Upload failed",
+      invalidRequestMessage: "Invalid upload request",
+    });
   }
 }

@@ -1,3 +1,4 @@
+import { createApiErrorResponse } from "@/lib/api-error-response";
 import { enforceRateLimit, requireSession } from "@/lib/api-security";
 import { cloudinary, extractCloudinaryPublicId } from "@/lib/cloudinary";
 import { connectDB } from "@/lib/db";
@@ -76,11 +77,12 @@ export async function GET(req: Request) {
     const entries = await Udankaar.find().sort({ createdAt: -1 });
 
     return Response.json(entries);
-  } catch {
-    return Response.json(
-      { error: "Failed to fetch Udankaar entries" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "udankaar:get",
+      fallbackMessage: "Failed to fetch Udankaar entries",
+      invalidRequestMessage: "Invalid Udankaar request",
+    });
   }
 }
 
@@ -137,11 +139,12 @@ export async function POST(req: Request) {
     });
 
     return Response.json({ message: "Udankaar entry created", entry });
-  } catch {
-    return Response.json(
-      { error: "Failed to create Udankaar entry" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "udankaar:create",
+      fallbackMessage: "Failed to create Udankaar entry",
+      invalidRequestMessage: "Invalid Udankaar payload",
+    });
   }
 }
 
@@ -166,7 +169,13 @@ export async function DELETE(req: Request) {
     await connectDB();
 
     const { id } = await req.json();
-    const entry = await Udankaar.findById(id);
+    const normalizedId = typeof id === "string" ? id.trim() : "";
+
+    if (!normalizedId) {
+      return Response.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    const entry = await Udankaar.findById(normalizedId);
 
     if (!entry) {
       return Response.json({ error: "Udankaar entry not found" }, { status: 404 });
@@ -190,11 +199,12 @@ export async function DELETE(req: Request) {
     await entry.deleteOne();
 
     return Response.json({ message: "Udankaar entry deleted" });
-  } catch {
-    return Response.json(
-      { error: "Failed to delete Udankaar entry" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "udankaar:delete",
+      fallbackMessage: "Failed to delete Udankaar entry",
+      invalidRequestMessage: "Invalid Udankaar delete request",
+    });
   }
 }
 
@@ -239,22 +249,17 @@ export async function PUT(req: Request) {
       typeof photoPublicId === "string" ? photoPublicId.trim() : "";
     const safeYoutubeLink =
       typeof youtubeLink === "string" ? youtubeLink.trim() : "";
+    const oldPublicId =
+      safePhoto && safePhoto !== entry.photo
+        ? entry.photoPublicId ||
+          (entry.photo ? extractCloudinaryPublicId(entry.photo) : null)
+        : null;
 
     if (!safeTitle || !safeYoutubeLink) {
       return Response.json(
         { error: "Title and YouTube link are required" },
         { status: 400 }
       );
-    }
-
-    if (safePhoto && safePhoto !== entry.photo) {
-      const oldPublicId =
-        entry.photoPublicId ||
-        (entry.photo ? extractCloudinaryPublicId(entry.photo) : null);
-
-      if (oldPublicId) {
-        await cloudinary.uploader.destroy(oldPublicId);
-      }
     }
 
     const slug = await createUniqueSlug(safeTitle, String(id));
@@ -279,14 +284,42 @@ export async function PUT(req: Request) {
       { new: true }
     );
 
+    if (!updated) {
+      return Response.json(
+        { error: "Udankaar entry not found" },
+        { status: 404 }
+      );
+    }
+
+    let warning: string | undefined;
+
+    if (oldPublicId) {
+      try {
+        const result = await cloudinary.uploader.destroy(oldPublicId);
+
+        if (result.result !== "ok" && result.result !== "not found") {
+          warning = "Previous Udankaar image could not be deleted.";
+          console.error("[udankaar:update:cleanup]", {
+            oldPublicId,
+            result,
+          });
+        }
+      } catch (cleanupError) {
+        warning = "Previous Udankaar image could not be deleted.";
+        console.error("[udankaar:update:cleanup]", cleanupError);
+      }
+    }
+
     return Response.json({
       message: "Udankaar entry updated",
       updated,
+      ...(warning ? { warning } : {}),
     });
-  } catch {
-    return Response.json(
-      { error: "Failed to update Udankaar entry" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "udankaar:update",
+      fallbackMessage: "Failed to update Udankaar entry",
+      invalidRequestMessage: "Invalid Udankaar payload",
+    });
   }
 }

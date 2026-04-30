@@ -1,3 +1,4 @@
+import { createApiErrorResponse } from "@/lib/api-error-response";
 import { connectDB } from "@/lib/db";
 import { enforceRateLimit, requireSession } from "@/lib/api-security";
 import {
@@ -78,11 +79,12 @@ export async function GET(req: Request) {
     const articles = await Article.find(query).sort({ createdAt: -1 });
 
     return Response.json(articles);
-  } catch {
-    return Response.json(
-      { error: "Failed to fetch articles" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "articles:get",
+      fallbackMessage: "Failed to fetch articles",
+      invalidRequestMessage: "Invalid article request",
+    });
   }
 }
 
@@ -167,11 +169,12 @@ export async function POST(req: Request) {
     });
 
     return Response.json({ message: "Article created", article });
-  } catch {
-    return Response.json(
-      { error: "Failed to create article" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "articles:create",
+      fallbackMessage: "Failed to create article",
+      invalidRequestMessage: "Invalid article payload",
+    });
   }
 }
 // DELETE article
@@ -196,7 +199,13 @@ export async function DELETE(req: Request) {
     await connectDB();
 
     const { id } = await req.json();
-    const article = await Article.findById(id);
+    const normalizedId = typeof id === "string" ? id.trim() : "";
+
+    if (!normalizedId) {
+      return Response.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    const article = await Article.findById(normalizedId);
 
     if (!article) {
       return Response.json({ error: "Article not found" }, { status: 404 });
@@ -237,11 +246,12 @@ export async function DELETE(req: Request) {
     await article.deleteOne();
 
     return Response.json({ message: "Article deleted" });
-  } catch {
-    return Response.json(
-      { error: "Failed to delete article" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "articles:delete",
+      fallbackMessage: "Failed to delete article",
+      invalidRequestMessage: "Invalid article delete request",
+    });
   }
 }
 
@@ -267,6 +277,11 @@ export async function PUT(req: Request) {
     await connectDB();
 
     const { id, title, content, status, seo } = await req.json();
+    const normalizedId = typeof id === "string" ? id.trim() : "";
+
+    if (!normalizedId) {
+      return Response.json({ error: "ID is required" }, { status: 400 });
+    }
 
     const safeTitle = String(title || "").trim();
     const safeContent = sanitizeHtmlContent(String(content || ""));
@@ -279,10 +294,10 @@ export async function PUT(req: Request) {
       );
     }
 
-    const slug = await createUniqueSlug(safeTitle, String(id));
+    const slug = await createUniqueSlug(safeTitle, normalizedId);
 
     const updated = await Article.findByIdAndUpdate(
-      id,
+      normalizedId,
       {
         title: safeTitle,
         slug,
@@ -309,11 +324,12 @@ export async function PUT(req: Request) {
     }
 
     return Response.json({ message: "Article updated", updated });
-  } catch {
-    return Response.json(
-      { error: "Failed to update article" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return createApiErrorResponse(error, {
+      context: "articles:update",
+      fallbackMessage: "Failed to update article",
+      invalidRequestMessage: "Invalid article payload",
+    });
   }
 }
  

@@ -13,6 +13,7 @@ import TextAlign from "@tiptap/extension-text-align";
 
 import { FontSize } from "@/lib/tiptap-fontsize";
 import Image from "@tiptap/extension-image";
+import { readErrorMessage } from "@/lib/read-error-message";
 
 const INITIAL_CONTENT = `<h1>Article</h1><p>Start writing...</p>`;
 
@@ -30,7 +31,6 @@ export default function NewArticlePage() {
   const [title, setTitle] = useState("");
   const [preview, setPreview] = useState(false);
   const [status, setStatus] = useState<"draft" | "publish">("draft");
-  const [contentSnapshot, setContentSnapshot] = useState(INITIAL_CONTENT);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -85,7 +85,6 @@ Image.extend({
     content: INITIAL_CONTENT,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      setContentSnapshot(editor.getHTML());
       // ✅ FIXED: Update active tools on every editor change
       updateActiveTools(editor);
     },
@@ -167,6 +166,12 @@ Image.extend({
           body: formData,
         });
 
+        if (!uploadRes.ok) {
+          throw new Error(
+            await readErrorMessage(uploadRes, "Image upload failed."),
+          );
+        }
+
         const uploadData = await uploadRes.json();
         imageUrl = uploadData.url;
       }
@@ -189,11 +194,17 @@ Image.extend({
 }),
       });
 
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        throw new Error(
+          await readErrorMessage(response, "Failed to create article."),
+        );
+      }
 
       router.push("/dashboard/articles");
-    } catch {
-      setError("Failed to create article");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to create article.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -368,19 +379,30 @@ Image.extend({
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-      const data = await res.json();
+        if (!res.ok) {
+          throw new Error(
+            await readErrorMessage(res, "Image upload failed."),
+          );
+        }
 
-      if (data.url) {
-        editor
-          ?.chain()
-          .focus()
-          .setImage({ src: data.url })
-          .run();
+        const data = await res.json();
+
+        if (!data.url) {
+          throw new Error("Image upload failed.");
+        }
+
+        setError("");
+        editor?.chain().focus().setImage({ src: data.url }).run();
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Image upload failed.",
+        );
       }
     };
 
