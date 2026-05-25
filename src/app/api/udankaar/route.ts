@@ -50,18 +50,18 @@ function getDefaultSeoDescription(title: string) {
 
 export async function GET(req: Request) {
   try {
-    const auth = await requireSession("authenticated");
-
-    if (auth.response) {
-      return auth.response;
-    }
-
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (id) {
+      const auth = await requireSession("authenticated");
+
+      if (auth.response) {
+        return auth.response;
+      }
+
       const entry = await Udankaar.findById(id);
 
       if (!entry) {

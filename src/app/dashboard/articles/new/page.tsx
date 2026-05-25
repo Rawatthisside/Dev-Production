@@ -37,11 +37,10 @@ export default function NewArticlePage() {
   const [seoTitle, setSeoTitle] = useState("");
 const [seoDescription, setSeoDescription] = useState("");
 
-  // ✅ NEW (image)
   const [file, setFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
 
-  // ✅ FIXED: Track active tools with editor updates
+  // Tools
   const [activeTools, setActiveTools] = useState({
     bold: false,
     italic: false,
@@ -51,10 +50,10 @@ const [seoDescription, setSeoDescription] = useState("");
     alignRight: false,
   });
 
-  // ✅ FIXED: Track heading level separately
+
   const [activeHeadingLevel, setActiveHeadingLevel] = useState<number | null>(null);
 
-  // ✅ FIXED: Track font size state separately
+
   const [fontSizeValue, setFontSizeValue] = useState<string>("");
 
   const editor = useEditor({
@@ -85,11 +84,11 @@ Image.extend({
     content: INITIAL_CONTENT,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      // ✅ FIXED: Update active tools on every editor change
+     
       updateActiveTools(editor);
     },
     onSelectionUpdate: ({ editor }) => {
-      // ✅ FIXED: Update active tools on selection change
+   
       updateActiveTools(editor);
     },
     editorProps: {
@@ -111,11 +110,11 @@ Image.extend({
     },
   });
 
-  // ✅ FIXED: Helper function to update active tools state
+ 
   const updateActiveTools = (editor: Editor | null) => {
     if (!editor) return;
 
-    // Update basic formatting tools
+   
     setActiveTools({
       bold: editor.isActive("bold"),
       italic: editor.isActive("italic"),
@@ -125,11 +124,11 @@ Image.extend({
       alignRight: editor.isActive({ textAlign: "right" }),
     });
 
-    // ✅ FIXED: Properly detect heading level
+   
     const headingLevel = editor.getAttributes("heading").level;
     setActiveHeadingLevel(headingLevel || null);
 
-    // ✅ FIXED: Properly detect font size
+ 
     const fontSize = editor.getAttributes("textStyle").fontSize;
     if (fontSize) {
       const sizeNumber = parseInt(fontSize, 10).toString();
@@ -139,7 +138,7 @@ Image.extend({
     }
   };
 
-  // ✅ FIXED: Initialize active tools on editor ready
+
   useEffect(() => {
     if (editor) {
       updateActiveTools(editor);
@@ -252,38 +251,19 @@ Image.extend({
             />
 <input
   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
-  placeholder="SEO Title (optional)"
+  placeholder="SEO Title "
   value={seoTitle}
   onChange={(e) => setSeoTitle(e.target.value)}
 />
 
 <textarea
   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
-  placeholder="SEO Description (optional)"
+  placeholder="SEO Description "
   value={seoDescription}
   onChange={(e) => setSeoDescription(e.target.value)}
 />
-            {/* ✅ IMAGE SECTION (NEW) */}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const selected = e.target.files?.[0];
-                if (selected) {
-                  setFile(selected);
-                  setImagePreview(URL.createObjectURL(selected));
-                }
-              }}
-              className="rounded border border-zinc-300 p-2"
-            />
-
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Article cover preview"
-                className="h-40 w-full object-cover rounded"
-              />
-            )}
+          
+          
 
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -292,7 +272,7 @@ Image.extend({
 
               <div className="flex flex-wrap items-center gap-2">
 
-                {/* ✅ HEADINGS - FIXED: Check active heading level properly */}
+               
                 {([1, 2, 3, 4, 5] as const).map((level) => (
                   <button
                     key={level}
@@ -306,7 +286,7 @@ Image.extend({
                   </button>
                 ))}
 
-                {/* ✅ FONT SIZE */}
+               
                 <select
                   value={fontSizeValue}
                   onChange={(e) => {
@@ -332,7 +312,7 @@ Image.extend({
                   ))}
                 </select>
 
-                {/* EXISTING TOOLS - FIXED: Using activeTools state */}
+               
                 <button
                   type="button"
                   onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -453,7 +433,7 @@ Image.extend({
         )}
 
         {preview && (
-          // ✅ FIXED: Full-page article preview with no overflow
+         
           <div className="w-full overflow-x-hidden">
             <div className="flex min-h-screen w-full flex-col items-center bg-linear-to-b from-zinc-50 to-white py-12 px-4 sm:px-6">
               <article className="w-full max-w-3xl">
@@ -463,12 +443,12 @@ Image.extend({
                     <img
                       src={imagePreview}
                       alt="Article cover"
-                      className="h-96 w-full object-cover"
+                      className="h-96 w-48 object-cover"
                     />
                   </div>
                 )}
 
-                {/* Article Header */}
+               
                 <header className="mb-8 border-b border-zinc-200 pb-8 px-4 sm:px-6">
                   <h1 className="text-3xl font-bold leading-tight text-zinc-900 sm:text-4xl md:text-5xl wrap-break-words">
                     {title || "Untitled Article"}
@@ -490,7 +470,7 @@ Image.extend({
                 {/* Footer Divider */}
                 <footer className="mt-12 border-t border-zinc-200 pt-8 px-4 sm:px-6">
                   <p className="text-sm text-zinc-500">
-                    End of article • Published on {new Date().toLocaleDateString()}
+                    End of article • Published on {new Date().toLocaleDateString("en-GB")}
                   </p>
                 </footer>
               </article>
@@ -499,50 +479,101 @@ Image.extend({
         )}
       </div>
 
-      {/* RIGHT SIDE - ENHANCED: Better status tracking */}
-      <aside className="h-fit w-full rounded-xl mt-18 border border-zinc-200 bg-white p-4 shadow-sm lg:w-72">
-        <h2 className="mb-1 text-base font-semibold">Publishing Options</h2>
+    {/* RIGHT COLUMN */}
+<div className="flex w-full flex-col gap-6 lg:w-72">
 
-        <div className="space-y-3 mt-3">
-          <button
-            type="button"
-            onClick={() => setStatus("draft")}
-            className={`cursor-pointer w-full rounded-lg border p-3 text-left transition ${
-              status === "draft"
-                ? "border-black bg-black text-white"
-                : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
-            }`}
-          >
-            <div className="font-medium">Save as Draft</div>
-            <div className={`text-xs mt-1 ${status === "draft" ? "text-zinc-200" : "text-zinc-500"}`}>
-              Keep this article private
-            </div>
-          </button>
+  {/* RIGHT SIDE - ENHANCED: Better status tracking */}
+  <aside className="h-fit w-full rounded-xl mt-18 border border-zinc-200 bg-white p-4 shadow-sm">
+    <h2 className="mb-1 text-base font-semibold">Publishing Options</h2>
 
-          <button
-            type="button"
-            onClick={() => setStatus("publish")}
-            className={`cursor-pointer w-full rounded-lg border p-3 text-left transition ${
-              status === "publish"
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
-            }`}
-          >
-            <div className="font-medium">Publish Now</div>
-            <div className={`text-xs mt-1 ${status === "publish" ? "text-blue-100" : "text-zinc-500"}`}>
-              Make this article public
-            </div>
-          </button>
-        </div>
-
-        <button
-          type="submit"
-          className="mt-4 w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
-          disabled={isSubmitting}
+    <div className="space-y-3 mt-3">
+      <button
+        type="button"
+        onClick={() => setStatus("draft")}
+        className={`cursor-pointer w-full rounded-lg border p-3 text-left transition ${
+          status === "draft"
+            ? "border-black bg-black text-white"
+            : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
+        }`}
+      >
+        <div className="font-medium">Save as Draft</div>
+        <div
+          className={`text-xs mt-1 ${
+            status === "draft"
+              ? "text-zinc-200"
+              : "text-zinc-500"
+          }`}
         >
-          {isSubmitting ? "Submitting..." : status === "publish" ? "Publish Article" : "Save Draft"}
-        </button>
-      </aside>
+          Keep this article private
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setStatus("publish")}
+        className={`cursor-pointer w-full rounded-lg border p-3 text-left transition ${
+          status === "publish"
+            ? "border-blue-600 bg-blue-600 text-white"
+            : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
+        }`}
+      >
+        <div className="font-medium">Publish Now</div>
+        <div
+          className={`text-xs mt-1 ${
+            status === "publish"
+              ? "text-blue-100"
+              : "text-zinc-500"
+          }`}
+        >
+          Make this article public
+        </div>
+      </button>
+    </div>
+
+    <button
+      type="submit"
+      className="mt-4 w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+      disabled={isSubmitting}
+    >
+      {isSubmitting
+        ? "Submitting..."
+        : status === "publish"
+        ? "Publish Article"
+        : "Save Draft"}
+    </button>
+  </aside>
+
+  {/* Independent Thumbnail Section */}
+  <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <h2 className="mb-3 text-base font-semibold">
+      Thumbnail / Cover Image
+    </h2>
+
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const selected = e.target.files?.[0];
+
+        if (selected) {
+          setFile(selected);
+          setImagePreview(URL.createObjectURL(selected));
+        }
+      }}
+      className="w-full rounded border border-zinc-300 p-2"
+    />
+
+    {imagePreview && (
+      <div className="mt-4 overflow-hidden rounded-lg border">
+        <img
+          src={imagePreview}
+          alt="Article cover preview"
+          className="h-48 w-full object-cover rounded"
+        />
+      </div>
+    )}
+  </div>
+</div>
     </form>
   );
 }

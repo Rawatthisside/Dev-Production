@@ -54,18 +54,20 @@ async function createUniqueSlug(title: string, excludeId?: string) {
 // GET all articles
 export async function GET(req: Request) {
   try {
-    const auth = await requireSession("authenticated");
-
-    if (auth.response) {
-      return auth.response;
-    }
-
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const status = searchParams.get("status");
+    const slug = searchParams.get("slug");
+
     if (id) {
+      const auth = await requireSession("authenticated");
+
+      if (auth.response) {
+        return auth.response;
+      }
+
       const article = await Article.findById(id);
       if (!article) {
         return Response.json({ error: "Article not found" }, { status: 404 });
@@ -73,8 +75,29 @@ export async function GET(req: Request) {
       return Response.json(article);
     }
 
- const query =
-  status === "draft" || status === "publish" ? { status } : {};
+    const auth = await requireSession("authenticated");
+    const isAuthenticated = !auth.response;
+
+    if (slug) {
+      const article = await Article.findOne(
+        isAuthenticated
+          ? { slug }
+          : { slug, status: "publish" },
+      );
+
+      if (!article) {
+        return Response.json({ error: "Article not found" }, { status: 404 });
+      }
+
+      return Response.json(article);
+    }
+
+    const query =
+      status === "draft" || status === "publish"
+        ? { status }
+        : isAuthenticated
+          ? {}
+          : { status: "publish" };
 
     const articles = await Article.find(query).sort({ createdAt: -1 });
 
